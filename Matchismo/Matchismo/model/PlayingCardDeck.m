@@ -11,6 +11,8 @@
 
 @implementation PlayingCardDeck
 
+//
+
 - (instancetype)init
 // initialize a full deck of card
 {
@@ -30,7 +32,7 @@
                 [self addCard:card];
             }
         }
-        NSLog(@"PlayingCardDeck initialized");
+ //       NSLog(@"PlayingCardDeck initialized");
     }
     
     return  self;

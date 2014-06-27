@@ -7,85 +7,88 @@
 //
 
 #import "CardGameViewController.h"
-#import "PlayingCardDeck.h"
-#import "Deck.h"
-#import "PlayingCard.h"
-#import "CardMatchingGame.h"
+#import "HistoryViewController.h"
+#import "Grid.h"
+
 
 @interface CardGameViewController ()
-@property (nonatomic) int flipCount;
+
 @property (nonatomic, strong) Deck *deck;
-@property (strong, nonatomic) CardMatchingGame *game;
-@property (strong, nonatomic) IBOutletCollection(UIButton) NSArray *cardButtons;
-@property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
+@property (weak, nonatomic) IBOutlet UIView *gridView;
 @property (weak, nonatomic) IBOutlet UISegmentedControl *gameMode;
-@property (nonatomic) BOOL selection;
+@property (strong, nonatomic) NSMutableArray *cardViews;
+@property (nonatomic) BOOL gameHasStarted;
+@property (strong, nonatomic) Grid *grid;
 
 @end
 
 
-
 @implementation CardGameViewController
+//
+- (Grid *) grid
+// lazily instantiate grid
+{
+    if (!_grid){
+        _grid = [[Grid alloc] init];
+        _grid.cellAspectRatio = self.maxCardSize.width / self.maxCardSize.height;
+        _grid.minimumNumberOfCells = self.numberOfCards;
+        _grid.maxCellWidth = self.maxCardSize.width;
+        _grid.maxCellHeight = self.maxCardSize.height;
+        _grid.size = self.gridView.frame.size;
+    }
+    return _grid;
+}
+
+- (NSMutableArray *)cardViews
+// lazily instantiate cardViews
+{
+    if (!_cardViews)
+        _cardViews = [[NSMutableArray alloc] initWithCapacity:self.numberOfCards];
+    
+    return  _cardViews;
+}
 
 - (CardMatchingGame *)game
 // instantiate game
 {
     if (!_game)
     {
-        _game = [[CardMatchingGame alloc] initWithCardCount:[self.cardButtons count]
+        _game = [[CardMatchingGame alloc] initWithCardCount:self.numberOfCards
                                                   usingDeck:[self createDeck]];
         
         // by default, game should start off in 2 card match
-        self.game.cardsToMatch = [self.gameMode selectedSegmentIndex] + 2;
-
-        NSLog(@"New game has started");
+        self.game.cardsToMatch = [self.gameMode selectedSegmentIndex] + [self numberToMatch];
     }
-
     
     return  _game;
 }
 
 
-- (Deck *)createDeck
+- (Deck *)createDeck // abstract method
 // instantiates a playingCardDeck
 {
-    return [[PlayingCardDeck alloc] init];
+    return nil;
 }
 
-- (IBAction)selectGameMode:(UISegmentedControl *)sender
+- (NSInteger)numberToMatch
 {
-    NSLog(@"selected segment index is %d", [sender selectedSegmentIndex]);
-    NSLog(@"Game mode is %d", [self.gameMode selectedSegmentIndex]);
-    
-    // select how many cards to match in game
+    return 2;
+}
+
+
+- (IBAction)selectGameMode:(id)sender
+{
+        // select how many cards to match in game
     if ([self.gameMode selectedSegmentIndex] == 0)
         self.game.cardsToMatch = 2;
     else
         self.game.cardsToMatch = 3;
-    
-    NSLog(@"Cards to match: %d", self.game.cardsToMatch);
-}
-
-
-- (IBAction)touchCardButton:(UIButton *)sender
-{
-    if (!self.selection){
-        // once user selects a card, disable gameMode selector
-        // when new game starts, no switching of game mode
-        NSLog(@"Game mode selection is %d", [self.gameMode selectedSegmentIndex]);
-        self.gameMode.enabled = NO;
-
-        NSLog(@"Game mode selector has been disabled");
         
-        self.selection = YES;
-    }
 
-    int chosenButtonIndex = [self.cardButtons indexOfObject:sender]; //which card was selected
-    [self.game chooseCardAtIndex:chosenButtonIndex];
-    
-    [self updateUI];
-    
 }
+
+
+
 - (IBAction)restartGame:(UIButton *)sender
 // restarts game
 {
@@ -95,46 +98,102 @@
     // reset game mode to 2 card match and enable game mode selector
     self.gameMode.selectedSegmentIndex = 0;
     self.gameMode.enabled = YES;
+    self.gameHasStarted = NO;
     
-    self.selection = NO;
+    // cardViews array is set to nil
+    self.cardViews = nil;
     
     // update the ui to reflect new game
     [self updateUI];
 
 }
 
+#define CARD_SPACING_PERCENT 0.08
+
 - (void)updateUI
-// cycle through all the cardButtons and set title and background image
 {
-    for(UIButton *cardButton in self.cardButtons){
-        int cardButtonIndex = [self.cardButtons indexOfObject:cardButton];
-        Card *card = [self.game cardAtIndex:cardButtonIndex];
+    
+    // loop over all cards in game
+    // To know if a view for a card does exist, store the index of the card in the tag property of the view
+    // If it doesn't exist, create a new view for that card, set the tag value, add a tap gesture to the view
+    // and finally add the "button" to the grid view and store it in the cards array. If the view does exist,
+    // update the view and mark matched cards. Finally, calculate the gram of teh card using the grid class.
+    // Because the grid class does not leave any space between cards, inset them slightly.
+    for (int cardIndex = 0 ; cardIndex < self.game.numberOfDealtCards ; cardIndex++)
+    {
+        Card *card = [self.game cardAtIndex:cardIndex];
         
-        [cardButton setTitle:[self titleForCard:card] forState:UIControlStateNormal];
-        [cardButton setBackgroundImage:[self backgroundImageForCard:card] forState:UIControlStateNormal];
+        NSUInteger viewIndex = [self.cardViews indexOfObjectPassingTest:^BOOL(id obj, NSUInteger idx, BOOL *stop) {
+            if ([obj isKindOfClass:[UIView class]]){
+                if (((UIView *)obj).tag == cardIndex)return YES;
+            }
+            return NO;
+        }];
         
-        // if a card is matched, disable corresponding cardButton
-        cardButton.enabled = !card.isMatched;
+        UIView *cardView;
+        if (viewIndex == NSNotFound){
+            cardView = [self createViewForCard:card];
+            cardView.tag = cardIndex;
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(touchCard:)];
+            
+            [cardView addGestureRecognizer:tap];
+            [self.cardViews addObject:cardView];
+            viewIndex = [self.cardViews indexOfObject:cardView];
+            [self.gridView addSubview:cardView];
+        } else {
+            cardView = self.cardViews[viewIndex];
+            [self updateView:cardView forCard:card];
+            cardView.alpha = card.matched ? 0.06 :1.0;
+        }
         
-        // update scoreLabel
-        self.scoreLabel.text = [NSString stringWithFormat:@"Score: %d", self.game.score];
+        CGRect frame = [self.grid frameOfCellAtRow: viewIndex / self.grid.columnCount
+                                          inColumn:viewIndex % self.grid.columnCount];
+        frame = CGRectInset(frame, frame.size.width * CARD_SPACING_PERCENT, frame.size.height * CARD_SPACING_PERCENT);
+        cardView.frame = frame;
+    }
+        
+    // update scoreLabel
+    self.scoreLabel.text = [NSString stringWithFormat:@"Score: %d", self.game.score];
+
+}
+
+- (UIView *)createViewForCard:(Card *)card
+// dummy method to be overwritten by subclasses
+{
+    UIView *cardView = [[UIView alloc] init];
+    [self updateView:cardView forCard:card];
+    return cardView;
+}
+
+- (void)updateView:(UIView *)cardView forCard:(Card *)card
+// dummy method to be overwritten by subclasses
+{
+    cardView.backgroundColor = [UIColor blueColor];
+}
+
+- (void)touchCard:(UITapGestureRecognizer *)gesture
+{
+    if (!self.gameHasStarted){
+        // once user selects a card, disable gameMode selector
+        // when new game starts, no switching of game mode
+        NSLog(@"Game has started");
+        
+        self.gameMode.enabled = NO;
+        
+        
+        self.gameHasStarted = YES;
     }
     
-
+    if (gesture.state == UIGestureRecognizerStateEnded)
+    {
+        [self.game chooseCardAtIndex:gesture.view.tag];
+        [self updateUI];
+    }
 }
 
 
-- (NSString *)titleForCard:(Card *)card
-// title depends on whether the card is chosen
-{
-    return card.isChosen ? card.contents : @"";
-}
 
-- (UIImage *)backgroundImageForCard:(Card *)card
-// background depends on whether the card is chosen
-{
-    return [UIImage imageNamed:card.isChosen ? @"cardfront": @"cardback"];
-}
+
 
 
 @end

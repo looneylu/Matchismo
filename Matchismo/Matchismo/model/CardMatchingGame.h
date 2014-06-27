@@ -13,8 +13,9 @@
 @interface CardMatchingGame : NSObject
 
 @property (nonatomic) NSInteger cardsToMatch;
+@property (nonatomic) NSUInteger numberOfDealtCards; //number of cards dealt in game
 
-
+//
 // initializes new game
 - (instancetype)initWithCardCount:(NSUInteger)count
                         usingDeck:(Deck *)deck;

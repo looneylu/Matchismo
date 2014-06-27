@@ -10,6 +10,8 @@
 
 @implementation PlayingCard
 
+//
+
 - (int)match:(NSArray *)otherCards
 // keeps score when there's a match
 // overrides superclass' match:
@@ -18,7 +20,7 @@
     
 //    NSLog(@"matching %@ %@ %@", self.contents, [[otherCards objectAtIndex:0]contents], [[otherCards objectAtIndex:1]contents]);
     
-    NSLog(@"the array now has %d objects", otherCards.count);
+//    NSLog(@"the array now has %d objects", otherCards.count);
     
     // match against a single other card
     if ([otherCards count] == 1){

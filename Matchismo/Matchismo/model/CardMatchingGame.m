@@ -15,6 +15,16 @@
 @end
 
 @implementation CardMatchingGame
+//
+- (NSUInteger)numberOfDealtCards
+{
+    return [self.cards count];
+}
+
+- (void)setCardsToMatch:(NSInteger)cardsToMatch
+{
+    _cardsToMatch = cardsToMatch;
+}
 
 
 - (NSMutableArray *)cards
@@ -82,7 +92,6 @@ static const int COST_TO_CHOOSE = 1;
 {
     Card *card = [self cardAtIndex:index]; //card to be chosen
     
-    NSLog(@"card contents:  %@", card.contents);
     
     if (!card.isMatched) // only unmatched cards can be chosen
     {
@@ -97,9 +106,7 @@ static const int COST_TO_CHOOSE = 1;
                 if (otherCard.isChosen && !otherCard.isMatched){
                     
                     // add otherCard to array
-                    NSLog(@"other card is %@", otherCard.contents);
                     [self.otherCards addObject:otherCard];
-                    NSLog(@"added %@ to array", otherCard.contents);
                 }
             }
             
@@ -121,14 +128,11 @@ static const int COST_TO_CHOOSE = 1;
                         self.score -= MISMATCH_PENALTY;
                         for (Card *other in self.otherCards){
                             other.chosen = NO;
-                            NSLog(@"%@ has been unchosen", other.contents);
                         }
                             
                         // set array to nil
                         self.otherCards = nil;
                     }
-                    if ([self.otherCards count])
-                        NSLog(@"Array isn't empty");
                 }
         
             self.score -= COST_TO_CHOOSE;
