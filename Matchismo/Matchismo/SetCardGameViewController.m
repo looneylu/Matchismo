@@ -9,7 +9,6 @@
 #import "SetCardGameViewController.h"
 #import "SetCardDeck.h"
 #import "SetCard.h"
-#import "HistoryViewController.h"
 
 @interface SetCardGameViewController ()
 

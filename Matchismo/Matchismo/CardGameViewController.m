@@ -7,7 +7,6 @@
 //
 
 #import "CardGameViewController.h"
-#import "HistoryViewController.h"
 #import "Grid.h"
 
 
@@ -100,6 +99,11 @@
     self.gameMode.enabled = YES;
     self.gameHasStarted = NO;
     
+    // erase the card views
+    for (UIView *subView in self.cardViews) {
+        [subView removeFromSuperview];
+    }
+    
     // cardViews array is set to nil
     self.cardViews = nil;
     
@@ -176,19 +180,24 @@
     if (!self.gameHasStarted){
         // once user selects a card, disable gameMode selector
         // when new game starts, no switching of game mode
-        NSLog(@"Game has started");
-        
         self.gameMode.enabled = NO;
-        
-        
         self.gameHasStarted = YES;
     }
     
-    if (gesture.state == UIGestureRecognizerStateEnded)
-    {
-        [self.game chooseCardAtIndex:gesture.view.tag];
-        [self updateUI];
-    }
+    Card* card = [self.game cardAtIndex:gesture.view.tag];
+    
+    // when card is chosen, use flip transition
+    [UIView transitionWithView:gesture.view duration:0.25
+                       options:UIViewAnimationOptionTransitionFlipFromLeft
+                    animations:^{
+                        card.chosen = !card.chosen;
+                        [self updateView:gesture.view forCard:card];
+                    } completion:^(BOOL finished){
+                        card.chosen = !card.chosen;
+                        [self.game chooseCardAtIndex:gesture.view.tag];
+                        [self updateUI];
+                    }];
+
 }
 
 
