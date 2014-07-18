@@ -150,10 +150,20 @@
             cardView.alpha = card.matched ? 0.06 :1.0;
         }
         
-        CGRect frame = [self.grid frameOfCellAtRow: viewIndex / self.grid.columnCount
-                                          inColumn:viewIndex % self.grid.columnCount];
-        frame = CGRectInset(frame, frame.size.width * CARD_SPACING_PERCENT, frame.size.height * CARD_SPACING_PERCENT);
-        cardView.frame = frame;
+        
+        for (NSUInteger viewIndex = 0; viewIndex < [self.cardViews count]; viewIndex++) {
+            CGRect frame = [self.grid frameOfCellAtRow:viewIndex / self.grid.columnCount
+                                              inColumn:viewIndex % self.grid.columnCount];
+            frame = CGRectInset(frame, frame.size.width * CARD_SPACING_PERCENT, frame.size.height * CARD_SPACING_PERCENT);
+            UIView *cardView = (UIView *)self.cardViews[viewIndex];
+            
+            [UIView animateWithDuration:0.5
+                                  delay:0
+                                options:UIViewAnimationOptionCurveEaseInOut
+                             animations:^{
+                                 cardView.frame = frame;
+                             } completion:NULL];
+        }
     }
         
     // update scoreLabel
